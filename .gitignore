@@ -1,0 +1,8 @@
+# Python object files
+*.py[cd]
+*.py~
+*.so
+*.o
+__pycache__
+
+tags
