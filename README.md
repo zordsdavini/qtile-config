@@ -2,9 +2,9 @@
 My ~/.config/qtile
 
 * various dmenu apps (dmenu run, window list, clipmenu, passmenu, MOC manager, quick launch)
-* monadtall custom maximum - if there are 2 windows: on maximum take focus
+* monadtall custom maximum - if there are 2 windows: on maximum take focus (z_maximize)
 * watson ticker
-* next keyboeard keybinding
+* next keyboeard keybinding (z_next_keyboard)
 * show/hide bars
 
 ## Install
