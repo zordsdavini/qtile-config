@@ -118,7 +118,6 @@ keys = [
     Key("M-l", lazy.layout.right()),
     Key("M-j", lazy.layout.down()),
     Key("M-k", lazy.layout.up()),
-    Key("M-t", lazy.spawn('urxvt || st')),
 
     # Move windows
     Key("M-S-h", lazy.layout.shuffle_left()),
@@ -138,27 +137,29 @@ keys = [
     Key("M-A-j", lazy.layout.flip_down()),
     Key("M-A-k", lazy.layout.flip_up()),
 
+    Key("M-S-<Return>", lazy.layout.toggle_split()),
+
     # Monadtall additional
     Key("M-i", lazy.layout.grow()),
     Key("M-m", lazy.layout.shrink()),
-    Key("M-o", z_maximize),
-    Key("M-n", lazy.layout.reset()),
+    Key("M-o", z_maximize, desc='maximize window'),
+    Key("M-n", lazy.layout.reset(), desc='reset layout'),
     Key("M-S-<space>", lazy.layout.flip()),
 
     # Switch window focus to other pane(s) of stack
-    Key("M-<space>", lazy.layout.next()),
+    Key("M-<space>", lazy.layout.next(), desc='next window'),
 
-    # Switch between monitors
+    # Focus screen
     Key("M-<comma>", lazy.prev_screen()),
     Key("M-<period>", lazy.next_screen()),
 
     Key("M-<Return>", lazy.spawn("st -e tmux")),
-    Key("A-S-<space>", z_next_keyboard),
+    Key("A-S-<space>", z_next_keyboard, desc='switch keyboard layout'),
     Key("M-<Tab>", lazy.next_layout()),
-    Key("M-S-w", lazy.window.kill()),
+    Key("M-S-w", lazy.window.kill(), desc='close window'),
 
-    Key("M-S-x", lazy.hide_show_bar("top")),
-    Key("M-C-x", lazy.hide_show_bar("bottom")),
+    Key("M-S-x", lazy.hide_show_bar("top"), desc='toggle top bar'),
+    Key("M-C-x", lazy.hide_show_bar("bottom"), desc='toggle bottom bar'),
 
     Key("M-C-r", lazy.restart()),
     Key("M-C-f", lazy.window.toggle_floating()),
@@ -175,31 +176,35 @@ keys = [
     Key('<XF86MonBrightnessUp>', lazy.spawn(Commands.brightness_up)),
     Key('<XF86MonBrightnessDown>', lazy.spawn(Commands.brightness_down)),
     Key('<XF86Display>', lazy.spawn('arandr')),
-    Key('<XF86Favorites>', lazy.spawn('touchpad_toggle')),
+    Key('<XF86Favorites>', lazy.spawn('touchpad_toggle'), desc='on/off touchpad'),
 
     # Screenshot
-    Key('<Print>', lazy.spawn(Commands.screenshot_selection)),
-    Key('S-<Print>', lazy.spawn(Commands.screenshot_all)),
-    Key('A-<Print>', lazy.spawn(Commands.screenshot_window)),
+    Key('<Print>', lazy.spawn(Commands.screenshot_selection), desc='scrot selection'),
+    Key('S-<Print>', lazy.spawn(Commands.screenshot_all), desc='scrot screen'),
+    Key('A-<Print>', lazy.spawn(Commands.screenshot_window), desc='scrot window'),
 
     # DMENU
-    Key("M-r", lazy.run_extension(extension.DmenuRun())),
+    Key("M-r", lazy.run_extension(extension.DmenuRun()), desc='dmenu run'),
     Key("M-A-w", lazy.run_extension(extension.WindowList(
         item_format="{group}: {window}",
         foreground=BLUE,
-        selected_background=BLUE))),
+        selected_background=BLUE)),
+        desc='window list'),
     Key("M-C-c", lazy.run_extension(extension.Dmenu(
         dmenu_command="clipmenu",
         foreground=YELLOW,
-        selected_background=YELLOW))),
+        selected_background=YELLOW)),
+        desc='clipmenu'),
     Key("M-A-p", lazy.run_extension(extension.Dmenu(
         dmenu_command="passmenu",
         foreground=RED,
-        selected_background=RED))),
+        selected_background=RED)),
+        desc='passmenu'),
     Key("M-A-n", lazy.run_extension(extension.Dmenu(
         dmenu_command="networkmanager_dmenu",
         foreground=RED,
-        selected_background=RED))),
+        selected_background=RED)),
+        desc='dmenu networking'),
     Key("M-A-m", lazy.run_extension(extension.CommandSet(
         commands={
             'play/pause': '[ $(mocp -i | wc -l) -lt 2 ] && mocp -p || mocp -G',
@@ -211,7 +216,8 @@ keys = [
             'repeat': 'mocp -t repeat',
             },
         pre_commands=['[ $(mocp -i | wc -l) -lt 1 ] && mocp -S'],
-        foreground=BLUE, selected_background=BLUE))),
+        foreground=BLUE, selected_background=BLUE)),
+        desc='dmenu MOC'),
     Key("M-C-q", lazy.run_extension(extension.CommandSet(
         commands={
             'lock': 'slock',
@@ -221,14 +227,16 @@ keys = [
             'logout': 'qtile-cmd -o cmd -f shutdown',
             'reload': 'qtile-cmd -o cmd -f restart',
             },
-        foreground=RED, selected_background=RED))),
+        foreground=RED, selected_background=RED)),
+        desc='dmenu session manager'),
     Key("M-A-b", lazy.run_extension(extension.CommandSet(
         commands={
             'mail (neomutt)': 'EDITOR=/usr/bin/nvim st -e neomutt &',
             'irc (irssi)': 'st -e irssi &',
             'scan (utsushi)': 'utsushi &',
             },
-        foreground=YELLOW, selected_background=YELLOW))),
+        foreground=YELLOW, selected_background=YELLOW)),
+        desc='dmenu quicklaunch'),
 ]
 
 groups = [Group(i) for i in "1234567890"]
