@@ -5,6 +5,7 @@ My ~/.config/qtile
 * monadtall custom maximum - if there are 2 windows: on maximum take focus
 * watson ticker
 * next keyboeard keybinding
+* show/hide bars
 
 ## Install
 
