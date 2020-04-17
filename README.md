@@ -14,7 +14,7 @@ git clone git@github.com:zordsdavini/qtile-config.git ~/.config/qtile
 
 ## Keybindings
 
-<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png" alt="<M> keys" style="max-width:25%;"></a>
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png" alt="<M> keys" width="150px"></a>
 <a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-mod1__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-mod1__.png" alt="<M-A> keys" style="max-width:25%;"></a>
 <a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-shift__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-shift__.png" alt="<M-S> keys" style="max-width:25%;"></a>
 <a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-control__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-control__.png" alt="<M-C> keys" style="max-width:25%;"></a>
