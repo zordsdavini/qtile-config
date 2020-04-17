@@ -1,6 +1,11 @@
 # qtile-config
 My ~/.config/qtile
 
+* various dmenu apps (dmenu run, window list, clipmenu, passmenu, MOC manager, quick launch)
+* monadtall custom maximum - if there are 2 windows: on maximum take focus
+* watson ticker
+* next keyboeard keybinding
+
 ## Install
 
 ```
