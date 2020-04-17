@@ -14,11 +14,11 @@ git clone git@github.com:zordsdavini/qtile-config.git ~/.config/qtile
 
 ## Keybindings
 
-![<M> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png)
-![<M-A> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-mod1__.png)
-![<M-S> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-shift__.png)
-![<M-C> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-control__.png)
-![<A> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod1__.png)
-![<A-S> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod1-shift__.png)
-![No keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/__.png)
-![<S> keys](https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/shift__.png)
+<p><a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4__.png" alt="<M> keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-mod1__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-mod1__.png" alt="<M-A> keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-shift__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-shift__.png" alt="<M-S> keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-control__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod4-control__.png" alt="<M-C> keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod1__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod1__.png" alt="<A> keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod1-shift__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/mod1-shift__.png" alt="<A-S> keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/__.png" alt="No keys" style="max-width:25%;"></a>
+<a target="_blank" rel="noopener noreferrer" href="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/shift__.png"><img src="https://github.com/zordsdavini/qtile-config/raw/master/screenshots/keys/shift__.png" alt="<S> keys" style="max-width:25%;"></a></p>
