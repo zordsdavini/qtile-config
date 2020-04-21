@@ -62,12 +62,6 @@ def z_maximize(qtile):
             layout.cmd_next()
 
 
-# keyboard next layout
-@lazy.function
-def z_next_keyboard(qtile):
-    keyboard_widget.cmd_next_keyboard()
-
-
 class Commands:
     autorandr = ['autorandr', '-c']
     fehbg = ['sh', '~/.fehbg']
@@ -90,6 +84,9 @@ class Commands:
     def get_watson_status(self):
         w_stat = check_output(['watson', 'status'])
         return w_stat.decode("utf-8").replace('\n', '')
+
+    def get_kernel_release(self):
+        return check_output(['uname', '-r']).decode("utf-8").replace("\n", "")
 
 
 commands = Commands()
@@ -154,7 +151,9 @@ keys = [
     Key("M-<period>", lazy.next_screen()),
 
     Key("M-<Return>", lazy.spawn("st -e tmux")),
-    Key("A-S-<space>", z_next_keyboard, desc='switch keyboard layout'),
+
+    Key("A-S-<space>", lazy.widget['keyboardlayout'].next_keyboard(), desc='switch keyboard layout'),
+
     Key("M-<Tab>", lazy.next_layout()),
     Key("M-S-w", lazy.window.kill(), desc='close window'),
 
@@ -251,7 +250,7 @@ layouts = [
     layout.Max(),
     layout.MonadTall(border_focus=RED, new_at_current=True),
     layout.Columns(border_focus=RED),
-    layout.Bsp(border_focus=RED),
+    layout.Zoomy(),
 ]
 
 widget_defaults = dict(
@@ -263,24 +262,13 @@ widget_defaults = dict(
 )
 extension_defaults = dict(
     dmenu_prompt=">",
-    dmenu_font=FONT + '-8',
+    dmenu_font=FONT + '-10',
     background=BLACK,
     foreground=GREEN,
     selected_background=GREEN,
     selected_foreground=BLACK,
     dmenu_height=24,
 )
-
-keyboard_widget = widget.KeyboardLayout(
-        configured_keyboards=['us', 'lt sgs', 'ru phonetic'],
-        # display_map={
-        #     'us': 'us ',
-        #     'lt sgs': 'sgs',
-        #     # 'ru phonetic': 'ru',
-        #     },
-        options='compose:menu,grp_led:scroll',
-        foreground=GREEN
-        )
 
 top = bar.Bar(
     [
@@ -295,7 +283,16 @@ top = bar.Bar(
             volume_app=commands.alsamixer,
             foreground=GREEN),
 
-        keyboard_widget,
+        widget.KeyboardLayout(
+            configured_keyboards=['us', 'lt sgs', 'ru phonetic'],
+            # display_map={
+            #     'us': 'us ',
+            #     'lt sgs': 'sgs',
+            #     # 'ru phonetic': 'ru',
+            #     },
+            options='compose:menu,grp_led:scroll',
+            foreground=GREEN
+            ),
 
         widget.Battery(
             discharge_char='↓',
@@ -337,9 +334,20 @@ bottom = bar.Bar(
             backlight_name='intel_backlight'),
 
         widget.Pomodoro(
+            num_pomodori=4,
+            length_pomodori=25,
+            length_short_break=5,
+            length_long_break=15,
             color_inactive=YELLOW,
             color_break=GREEN,
-            color_active=RED),
+            color_active=RED,
+            notification_on=True,
+            prefix_inactive="",
+            prefix_active=" ",
+            prefix_break=" ",
+            prefix_long_break=" ",
+            prefix_paused="",
+            ),
 
         widget.GenPollText(
             func=commands.get_watson_status,
@@ -347,6 +355,8 @@ bottom = bar.Bar(
             foreground=BLUE),
 
         widget.Spacer(length=bar.STRETCH),
+        widget.TextBox(text=commands.get_kernel_release()),
+
         widget.CPUGraph(
             line_width=1,
             border_width=0,
@@ -366,7 +376,7 @@ bottom = bar.Bar(
         widget.MemoryGraph(
             line_width=1,
             border_width=0,
-            width=16,
+            width=4,
             type='box',
             graph_color=YELLOW,
             fill_color=YELLOW
