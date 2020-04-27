@@ -18,15 +18,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from libqtile.config import EzKey as Key, Screen, Group, Drag, Click
-from libqtile.command import lazy
-from libqtile import layout, bar, widget, extension, hook
-from subprocess import call, check_output
-import xrp
 import json
-from os import path, getenv
-
+from os import getenv, path
+from subprocess import call, check_output
 from typing import List  # noqa: F401
+
+import xrp
+from libqtile import bar, extension, hook, layout, widget
+from libqtile.command import lazy
+from libqtile.config import Click, Drag, EzKey, Group, Screen
+
 
 """
 TODO
@@ -111,100 +112,119 @@ WHITE = color_data['colors']['color7']
 
 keys = [
     # Switch between windows
-    Key("M-h", lazy.layout.left()),
-    Key("M-l", lazy.layout.right()),
-    Key("M-j", lazy.layout.down()),
-    Key("M-k", lazy.layout.up()),
+    EzKey("M-h", lazy.layout.left()),
+    EzKey("M-l", lazy.layout.right()),
+    EzKey("M-j", lazy.layout.down()),
+    EzKey("M-k", lazy.layout.up()),
 
     # Move windows
-    Key("M-S-h", lazy.layout.shuffle_left()),
-    Key("M-S-l", lazy.layout.shuffle_right()),
-    Key("M-S-j", lazy.layout.shuffle_down()),
-    Key("M-S-k", lazy.layout.shuffle_up()),
+    EzKey("M-S-h", lazy.layout.shuffle_left()),
+    EzKey("M-S-l", lazy.layout.shuffle_right()),
+    EzKey("M-S-j", lazy.layout.shuffle_down()),
+    EzKey("M-S-k", lazy.layout.shuffle_up()),
 
     # Grow windows
-    Key("M-C-h", lazy.layout.grow_left()),
-    Key("M-C-l", lazy.layout.grow_right()),
-    Key("M-C-j", lazy.layout.grow_down()),
-    Key("M-C-k", lazy.layout.grow_up()),
+    EzKey("M-C-h", lazy.layout.grow_left()),
+    EzKey("M-C-l", lazy.layout.grow_right()),
+    EzKey("M-C-j", lazy.layout.grow_down()),
+    EzKey("M-C-k", lazy.layout.grow_up()),
 
     # Flip windows
-    Key("M-A-h", lazy.layout.flip_left()),
-    Key("M-A-l", lazy.layout.flip_right()),
-    Key("M-A-j", lazy.layout.flip_down()),
-    Key("M-A-k", lazy.layout.flip_up()),
+    EzKey("M-A-h", lazy.layout.flip_left()),
+    EzKey("M-A-l", lazy.layout.flip_right()),
+    EzKey("M-A-j", lazy.layout.flip_down()),
+    EzKey("M-A-k", lazy.layout.flip_up()),
 
-    Key("M-S-<Return>", lazy.layout.toggle_split()),
+    EzKey("M-S-<Return>", lazy.layout.toggle_split()),
 
     # Monadtall additional
-    Key("M-i", lazy.layout.grow()),
-    Key("M-m", lazy.layout.shrink()),
-    Key("M-o", z_maximize, desc='maximize window'),
-    Key("M-n", lazy.layout.reset(), desc='reset layout'),
-    Key("M-S-<space>", lazy.layout.flip()),
+    EzKey("M-i", lazy.layout.grow()),
+    EzKey("M-m", lazy.layout.shrink()),
+    EzKey("M-o", z_maximize, desc='maximize window'),
+    EzKey("M-n", lazy.layout.reset(), desc='reset layout'),
+    EzKey("M-S-<space>", lazy.layout.flip()),
 
     # Switch window focus to other pane(s) of stack
-    Key("M-<space>", lazy.layout.next(), desc='next window'),
+    EzKey("M-<space>", lazy.layout.next(), desc='next window'),
 
     # Focus screen
-    Key("M-<comma>", lazy.prev_screen()),
-    Key("M-<period>", lazy.next_screen()),
+    EzKey("M-<comma>", lazy.prev_screen()),
+    EzKey("M-<period>", lazy.next_screen()),
 
-    Key("M-<Return>", lazy.spawn("st -e tmux")),
+    EzKey("M-<Return>", lazy.spawn("st -e tmux")),
 
-    Key("A-S-<space>", lazy.widget['keyboardlayout'].next_keyboard(), desc='switch keyboard layout'),
+    EzKey(
+        "A-S-<space>",
+        lazy.widget['keyboardlayout'].next_keyboard(),
+        desc='switch keyboard layout'),
 
-    Key("M-<Tab>", lazy.next_layout()),
-    Key("M-S-w", lazy.window.kill(), desc='close window'),
+    EzKey("M-<Tab>", lazy.next_layout()),
+    EzKey("M-S-w", lazy.window.kill(), desc='close window'),
+    EzKey("M-C-w", lazy.spawn('xkill'), desc='kill window'),
 
-    Key("M-S-x", lazy.hide_show_bar("top"), desc='toggle top bar'),
-    Key("M-C-x", lazy.hide_show_bar("bottom"), desc='toggle bottom bar'),
+    EzKey("M-S-x", lazy.hide_show_bar("top"), desc='toggle top bar'),
+    EzKey("M-C-x", lazy.hide_show_bar("bottom"), desc='toggle bottom bar'),
 
-    Key("M-C-r", lazy.restart()),
-    Key("M-C-f", lazy.window.toggle_floating()),
+    EzKey("M-C-r", lazy.restart()),
+    EzKey("M-C-f", lazy.window.toggle_floating()),
 
     # Sound
-    Key('<XF86AudioRaiseVolume>', lazy.spawn(Commands.volume_up)),
-    Key('<XF86AudioLowerVolume>', lazy.spawn(Commands.volume_down)),
-    Key('M-<Up>', lazy.spawn(Commands.volume_up)),
-    Key('M-<Down>', lazy.spawn(Commands.volume_down)),
-    Key('<XF86AudioMute>', lazy.spawn(Commands.volume_toggle)),
-    Key('<XF86AudioMicMute>', lazy.spawn(Commands.mic_toggle)),
+    EzKey('<XF86AudioRaiseVolume>', lazy.spawn(Commands.volume_up)),
+    EzKey('<XF86AudioLowerVolume>', lazy.spawn(Commands.volume_down)),
+    EzKey('M-<Up>', lazy.spawn(Commands.volume_up)),
+    EzKey('M-<Down>', lazy.spawn(Commands.volume_down)),
+    EzKey('<XF86AudioMute>', lazy.spawn(Commands.volume_toggle)),
+    EzKey('<XF86AudioMicMute>', lazy.spawn(Commands.mic_toggle)),
 
     # Other FN keys
-    Key('<XF86MonBrightnessUp>', lazy.spawn(Commands.brightness_up)),
-    Key('<XF86MonBrightnessDown>', lazy.spawn(Commands.brightness_down)),
-    Key('<XF86Display>', lazy.spawn('arandr')),
-    Key('<XF86Favorites>', lazy.spawn('touchpad_toggle'), desc='on/off touchpad'),
+    EzKey('<XF86MonBrightnessUp>', lazy.spawn(Commands.brightness_up)),
+    EzKey('<XF86MonBrightnessDown>', lazy.spawn(Commands.brightness_down)),
+    EzKey('<XF86Display>', lazy.spawn('arandr')),
+
+    EzKey(
+        '<XF86Favorites>',
+        lazy.spawn('touchpad_toggle'),
+        desc='on/off touchpad'),
 
     # Screenshot
-    Key('<Print>', lazy.spawn(Commands.screenshot_selection), desc='scrot selection'),
-    Key('S-<Print>', lazy.spawn(Commands.screenshot_all), desc='scrot screen'),
-    Key('A-<Print>', lazy.spawn(Commands.screenshot_window), desc='scrot window'),
+    EzKey(
+        '<Print>',
+        lazy.spawn(Commands.screenshot_selection),
+        desc='scrot selection'),
+
+    EzKey(
+        'S-<Print>',
+        lazy.spawn(Commands.screenshot_all),
+        desc='scrot screen'),
+
+    EzKey(
+        'A-<Print>',
+        lazy.spawn(Commands.screenshot_window),
+        desc='scrot window'),
 
     # DMENU
-    Key("M-r", lazy.run_extension(extension.DmenuRun()), desc='dmenu run'),
-    Key("M-A-w", lazy.run_extension(extension.WindowList(
+    EzKey("M-r", lazy.run_extension(extension.DmenuRun()), desc='dmenu run'),
+    EzKey("M-A-w", lazy.run_extension(extension.WindowList(
         item_format="{group}: {window}",
         foreground=BLUE,
         selected_background=BLUE)),
         desc='window list'),
-    Key("M-C-c", lazy.run_extension(extension.Dmenu(
+    EzKey("M-C-c", lazy.run_extension(extension.Dmenu(
         dmenu_command="clipmenu",
         foreground=YELLOW,
         selected_background=YELLOW)),
         desc='clipmenu'),
-    Key("M-A-p", lazy.run_extension(extension.Dmenu(
+    EzKey("M-A-p", lazy.run_extension(extension.Dmenu(
         dmenu_command="passmenu",
         foreground=RED,
         selected_background=RED)),
         desc='passmenu'),
-    Key("M-A-n", lazy.run_extension(extension.Dmenu(
+    EzKey("M-A-n", lazy.run_extension(extension.Dmenu(
         dmenu_command="networkmanager_dmenu",
         foreground=RED,
         selected_background=RED)),
         desc='dmenu networking'),
-    Key("M-A-m", lazy.run_extension(extension.CommandSet(
+    EzKey("M-A-m", lazy.run_extension(extension.CommandSet(
         commands={
             'play/pause': '[ $(mocp -i | wc -l) -lt 2 ] && mocp -p || mocp -G',
             'next': 'mocp -f',
@@ -217,7 +237,7 @@ keys = [
         pre_commands=['[ $(mocp -i | wc -l) -lt 1 ] && mocp -S'],
         foreground=BLUE, selected_background=BLUE)),
         desc='dmenu MOC'),
-    Key("M-C-q", lazy.run_extension(extension.CommandSet(
+    EzKey("M-C-q", lazy.run_extension(extension.CommandSet(
         commands={
             'lock': 'slock',
             'suspend': 'systemctl suspend && slock',
@@ -228,7 +248,7 @@ keys = [
             },
         foreground=RED, selected_background=RED)),
         desc='dmenu session manager'),
-    Key("M-A-b", lazy.run_extension(extension.CommandSet(
+    EzKey("M-A-r", lazy.run_extension(extension.CommandSet(
         commands={
             'mail (neomutt)': 'EDITOR=/usr/bin/nvim st -e neomutt &',
             'irc (irssi)': 'st -e irssi &',
@@ -242,8 +262,8 @@ groups = [Group(i) for i in "1234567890"]
 
 for i in groups:
     keys.extend([
-        Key("M-%s" % i.name, lazy.group[i.name].toscreen()),
-        Key("M-S-%s" % i.name, lazy.window.togroup(i.name)),
+        EzKey("M-%s" % i.name, lazy.group[i.name].toscreen()),
+        EzKey("M-S-%s" % i.name, lazy.window.togroup(i.name)),
     ])
 
 layouts = [
@@ -288,9 +308,9 @@ top = bar.Bar(
             # display_map={
             #     'us': 'us ',
             #     'lt sgs': 'sgs',
-            #     # 'ru phonetic': 'ru',
+            #     'ru phonetic': 'ru ',
             #     },
-            options='compose:menu,grp_led:scroll',
+            options='compose:rctrl',
             foreground=GREEN
             ),
 
@@ -342,11 +362,11 @@ bottom = bar.Bar(
             color_break=GREEN,
             color_active=RED,
             notification_on=True,
-            prefix_inactive="",
-            prefix_active=" ",
-            prefix_break=" ",
-            prefix_long_break=" ",
-            prefix_paused="",
+            prefix_inactive="🍅",
+            prefix_active="🍅 ",
+            prefix_break="☕ ",
+            prefix_long_break="☕ ",
+            prefix_paused="🍅 PAUSED",
             ),
 
         widget.GenPollText(
@@ -443,7 +463,8 @@ focus_on_window_activation = "smart"
 
 @hook.subscribe.startup
 def startup():
-    bottom.show(False)
+    # bottom.show(False)
+    pass
 
 
 @hook.subscribe.startup_once
@@ -457,6 +478,13 @@ def restart_on_randr(qtile, ev):
     qtile.cmd_restart()
 
 
+@hook.subscribe.client_new
+def floating_size_hints(window):
+    hints = window.window.get_wm_normal_hints()
+    if hints and 0 < hints['max_width'] < 1000:
+        window.floating = True
+
+
 # XXX: Gasp! We're lying here. In fact, nobody really uses or cares about this
 # string besides java UI toolkits; you can see several discussions on the
 # mailing lists, GitHub issues, and other WM documentation that suggest setting
@@ -465,4 +493,4 @@ def restart_on_randr(qtile, ev):
 #
 # We choose LG3D to maximize irony: it is a 3D non-reparenting WM written in
 # java that happens to be on java's whitelist.
-wmname = "LG3D"
+wmname = "Qtile"
