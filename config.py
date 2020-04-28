@@ -89,6 +89,9 @@ class Commands:
     def get_kernel_release(self):
         return check_output(['uname', '-r']).decode("utf-8").replace("\n", "")
 
+    def get_uptime(self):
+        return check_output(['uptime', '-p']).decode("utf-8").replace("\n", "")
+
 
 commands = Commands()
 
@@ -151,7 +154,8 @@ keys = [
     EzKey("M-<comma>", lazy.prev_screen()),
     EzKey("M-<period>", lazy.next_screen()),
 
-    EzKey("M-<Return>", lazy.spawn("st -e tmux")),
+    EzKey("M-<Return>", lazy.spawn("st")),
+    EzKey("M-A-<Return>", lazy.spawn("st -e tmux")),
 
     EzKey(
         "A-S-<space>",
@@ -268,9 +272,8 @@ for i in groups:
 
 layouts = [
     layout.Max(),
-    layout.MonadTall(border_focus=RED, new_at_current=True),
     layout.Columns(border_focus=RED),
-    layout.Zoomy(),
+    # layout.MonadTall(border_focus=RED, new_at_current=True),
 ]
 
 widget_defaults = dict(
@@ -297,7 +300,8 @@ top = bar.Bar(
         widget.WindowName(),
         widget.Clipboard(foreground=RED),
         widget.Moc(play_color=GREEN, noplay_color=YELLOW),
-        widget.Systray(),
+
+        widget.TextBox(text='::', foreground=RED),
 
         widget.Volume(
             volume_app=commands.alsamixer,
@@ -305,11 +309,11 @@ top = bar.Bar(
 
         widget.KeyboardLayout(
             configured_keyboards=['us', 'lt sgs', 'ru phonetic'],
-            # display_map={
-            #     'us': 'us ',
-            #     'lt sgs': 'sgs',
-            #     'ru phonetic': 'ru ',
-            #     },
+            display_map={
+                'us': 'us ',
+                'lt sgs': 'sgs',
+                'ru phonetic': 'ru ',
+                },
             options='compose:rctrl',
             foreground=GREEN
             ),
@@ -324,13 +328,19 @@ top = bar.Bar(
         widget.Maildir(
             maildir_path='~/.local/share/mail/gmail',
             sub_folders=[{'path': 'INBOX', 'label': 'g'}],
+            subfolder_fmt='{label} {value}',
             total=True,
+            hide_when_empty=True,
+            update_interval=10,
             foreground=BLUE),
 
         widget.Maildir(
             maildir_path='~/.local/share/mail/zordsdavini',
             sub_folders=[{'path': 'INBOX', 'label': 'z'}],
             total=True,
+            subfolder_fmt='{label} {value}',
+            hide_when_empty=True,
+            update_interval=10,
             foreground=BLUE),
 
         widget.CheckUpdates(
@@ -341,6 +351,7 @@ top = bar.Bar(
             execute=commands.update),
 
         widget.Clock(format='%Y-%m-%d %H:%M'),
+        widget.Systray(),
     ],
     24,
 )
@@ -348,11 +359,6 @@ top = bar.Bar(
 
 bottom = bar.Bar(
     [
-        widget.Backlight(
-            change_command='light -S {0}',
-            foreground=GREEN,
-            backlight_name='intel_backlight'),
-
         widget.Pomodoro(
             num_pomodori=4,
             length_pomodori=25,
@@ -375,7 +381,22 @@ bottom = bar.Bar(
             foreground=BLUE),
 
         widget.Spacer(length=bar.STRETCH),
-        widget.TextBox(text=commands.get_kernel_release()),
+        widget.TextBox(text=commands.get_kernel_release(), foreground=WHITE),
+
+        widget.GenPollText(
+            func=commands.get_uptime,
+            update_interval=60,
+            foreground=WHITE),
+
+        widget.Backlight(
+            change_command='light -S {0}',
+            foreground=YELLOW,
+            backlight_name='intel_backlight'),
+
+        widget.Wlan(
+            interface='wlp0s20f3',
+            format='{essid} {percent:2.0%}',
+            foreground=BLUE),
 
         widget.CPUGraph(
             line_width=1,
@@ -439,24 +460,28 @@ dgroups_key_binder = None
 dgroups_app_rules = []  # type: List
 main = None
 follow_mouse_focus = True
-bring_front_click = False
+bring_front_click = True
 cursor_warp = False
-floating_layout = layout.Floating(float_rules=[
-    {'wmclass': 'confirm'},
-    {'wmclass': 'dialog'},
-    {'wmclass': 'download'},
-    {'wmclass': 'error'},
-    {'wmclass': 'file_progress'},
-    {'wmclass': 'notification'},
-    {'wmclass': 'splash'},
-    {'wmclass': 'toolbar'},
-    {'wmclass': 'confirmreset'},  # gitk
-    {'wmclass': 'makebranch'},  # gitk
-    {'wmclass': 'maketag'},  # gitk
-    {'wname': 'branchdialog'},  # gitk
-    {'wname': 'pinentry'},  # GPG key password entry
-    {'wmclass': 'ssh-askpass'},  # ssh-askpass
-])
+
+floating_layout = layout.Floating(
+    float_rules=[
+        {'wmclass': 'confirm'},
+        {'wmclass': 'dialog'},
+        {'wmclass': 'download'},
+        {'wmclass': 'error'},
+        {'wmclass': 'file_progress'},
+        {'wmclass': 'notification'},
+        {'wmclass': 'splash'},
+        {'wmclass': 'toolbar'},
+        {'wmclass': 'confirmreset'},  # gitk
+        {'wmclass': 'makebranch'},  # gitk
+        {'wmclass': 'maketag'},  # gitk
+        {'wname': 'branchdialog'},  # gitk
+        {'wname': 'pinentry'},  # GPG key password entry
+        {'wmclass': 'ssh-askpass'},  # ssh-askpass
+    ],
+    border_focus=GREEN)
+
 auto_fullscreen = True
 focus_on_window_activation = "smart"
 
