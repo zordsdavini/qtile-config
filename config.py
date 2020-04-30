@@ -25,8 +25,8 @@ from typing import List  # noqa: F401
 
 import xrp
 from libqtile import bar, extension, hook, layout, widget
-from libqtile.command import lazy
 from libqtile.config import Click, Drag, EzKey, Group, Screen
+from libqtile.lazy import lazy
 
 
 """
@@ -271,8 +271,8 @@ for i in groups:
     ])
 
 layouts = [
-    layout.Max(),
     layout.Columns(border_focus=RED),
+    layout.Max(),
     # layout.MonadTall(border_focus=RED, new_at_current=True),
 ]
 
@@ -377,7 +377,7 @@ bottom = bar.Bar(
 
         widget.GenPollText(
             func=commands.get_watson_status,
-            update_interval=1,
+            update_interval=2,
             foreground=BLUE),
 
         widget.Spacer(length=bar.STRETCH),
