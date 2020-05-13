@@ -50,17 +50,47 @@ improve Qtile:
 def z_maximize(qtile):
     layout = qtile.current_layout
     group = qtile.current_group
-    layout.cmd_maximize()
-    if len(group.windows) == 2:
-        fw = qtile.current_window
-        ow = None
-        # get other window
-        for w in group.windows:
-            if w != fw:
-                ow = w
 
-        if ow and fw.info()['width'] < ow.info()['width']:
-            layout.cmd_next()
+    if layout.name == 'monadtall':
+        layout.cmd_maximize()
+        if len(group.windows) != 2:
+            return
+
+    if layout.name == 'columns':
+        # developped for 2 windows...
+
+        if len(group.windows) < 2:
+            return
+
+        min_ratio = .25
+        layout_width = group.screen.dwidth
+        fw = qtile.current_window
+        if layout_width/2 < fw.width:
+            # minimize
+            if fw.x == 0:
+                cmd = layout.cmd_grow_left
+            else:
+                cmd = layout.cmd_grow_right
+            while fw.width > layout_width*min_ratio:
+                cmd()
+        else:
+            # maximize
+            if fw.x == 0:
+                cmd = layout.cmd_grow_right
+            else:
+                cmd = layout.cmd_grow_left
+            while fw.width < layout_width*(1-min_ratio):
+                cmd()
+
+    fw = qtile.current_window
+    ow = None
+    # get other window
+    for w in group.windows:
+        if w != fw:
+            ow = w
+
+    if ow and fw.info()['width'] < ow.info()['width']:
+        layout.cmd_next()
 
 
 class Commands:
@@ -144,7 +174,7 @@ keys = [
     EzKey("M-i", lazy.layout.grow()),
     EzKey("M-m", lazy.layout.shrink()),
     EzKey("M-o", z_maximize, desc='maximize window'),
-    EzKey("M-n", lazy.layout.reset(), desc='reset layout'),
+    EzKey("M-n", lazy.layout.normalize(), desc='reset layout'),
     EzKey("M-S-<space>", lazy.layout.flip()),
 
     # Switch window focus to other pane(s) of stack
@@ -266,7 +296,7 @@ groups = [Group(i) for i in "1234567890"]
 
 for i in groups:
     keys.extend([
-        EzKey("M-%s" % i.name, lazy.group[i.name].toscreen()),
+        EzKey("M-%s" % i.name, lazy.group[i.name].toscreen(toggle=True)),
         EzKey("M-S-%s" % i.name, lazy.window.togroup(i.name)),
     ])
 
