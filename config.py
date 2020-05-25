@@ -25,8 +25,12 @@ from typing import List  # noqa: F401
 
 import xrp
 from libqtile import bar, extension, hook, layout, widget
+from libqtile.command_client import CommandClient
 from libqtile.config import Click, Drag, EzKey, Group, Screen
 from libqtile.lazy import lazy
+from libqtile.log_utils import logger
+
+logger.debug('Starting...')
 
 
 """
@@ -44,6 +48,7 @@ improve Qtile:
 7. restore POMODORE on qtile restart
 
 """
+
 
 # monadtall extention to follow maximized window if we have only two
 @lazy.function
@@ -93,6 +98,17 @@ def z_maximize(qtile):
         layout.cmd_next()
 
 
+def z_update_bar_bg(qtile):
+    current_screen = qtile.current_screen
+    for screen in qtile.screens:
+        bg_color = GREEN if current_screen == screen else RED
+        top = screen.top
+        for w in top.widgets:
+            if 'windowname' == w.name:
+                w.background = bg_color
+        top.draw()
+
+
 class Commands:
     autorandr = ['autorandr', '-c']
     fehbg = ['sh', '~/.fehbg']
@@ -115,12 +131,6 @@ class Commands:
     def get_watson_status(self):
         w_stat = check_output(['watson', 'status'])
         return w_stat.decode("utf-8").replace('\n', '')
-
-    def get_kernel_release(self):
-        return check_output(['uname', '-r']).decode("utf-8").replace("\n", "")
-
-    def get_uptime(self):
-        return check_output(['uptime', '-p']).decode("utf-8").replace("\n", "")
 
 
 commands = Commands()
@@ -290,6 +300,23 @@ keys = [
             },
         foreground=YELLOW, selected_background=YELLOW)),
         desc='dmenu quicklaunch'),
+
+    EzKey("M-A-i", lazy.run_extension(extension.CommandSet(
+        commands={
+            'work today': 'notify-send -u low -t 10000 "🛈" '
+            '"`watson report -Gdc`"',
+            'work log': 'notify-send -u low -t 10000 "🛈" '
+            '"`watson log --from=$(date  --date=\"5 days ago\" +"%Y-%m-%d") -Gc`"',
+            'time': 'notify-send -u normal -t 30000 "🛈" '
+            '"`LC_ALL=sgs_LT.utf-8 date && echo && LC_ALL=sgs_LT.utf-8 cal`"',
+            'weather':  'notify-send -u critical -t 10000 "🛈" '
+            '"`ansiweather -l Galgiai -a 0 -s true -i 0 -p 0 -d true && echo '
+            '&& ansiweather -l Galgiai -f 7 -a false -s true`"',
+            'uptime': 'notify-send -u low "🛈" "`uptime -p`"',
+            'kernel': 'notify-send -u low "🛈" "`uname -r`"',
+            },
+        foreground=BLUE, selected_background=BLUE)),
+        desc='dmenu various info'),
 ]
 
 groups = [Group(i) for i in "1234567890"]
@@ -325,9 +352,15 @@ extension_defaults = dict(
 
 top = bar.Bar(
     [
+        widget.CurrentScreen(
+            active_text='⬤',
+            inactive_text='⬤',
+            active_color=GREEN,
+            inactive_color=RED),
+
         widget.GroupBox(hide_unused=True),
         widget.CurrentLayoutIcon(scale=0.65),
-        widget.WindowName(),
+        widget.WindowName(foreground=BLACK),
         widget.Clipboard(foreground=RED),
         widget.Moc(play_color=GREEN, noplay_color=YELLOW),
 
@@ -384,6 +417,7 @@ top = bar.Bar(
         widget.Systray(),
     ],
     24,
+    opacity=0.6
 )
 
 
@@ -411,12 +445,6 @@ bottom = bar.Bar(
             foreground=BLUE),
 
         widget.Spacer(length=bar.STRETCH),
-        widget.TextBox(text=commands.get_kernel_release(), foreground=WHITE),
-
-        widget.GenPollText(
-            func=commands.get_uptime,
-            update_interval=60,
-            foreground=WHITE),
 
         widget.Backlight(
             change_command='light -S {0}',
@@ -454,15 +482,24 @@ bottom = bar.Bar(
             ),
     ],
     24,
+    opacity=0.6
 )
 screens = [
     Screen(top=top, bottom=bottom),
     Screen(top=bar.Bar(
         [
+            widget.CurrentScreen(
+                active_text='⬤',
+                inactive_text='⬤',
+                active_color=GREEN,
+                inactive_color=RED),
+
             widget.CurrentLayoutIcon(scale=0.65),
-            widget.WindowName(),
+            widget.WindowName(foreground=BLACK),
         ],
-        24
+        24,
+        opacity=0.6,
+        background=RED,
     )),
 ]
 
@@ -489,7 +526,7 @@ mouse = [
 dgroups_key_binder = None
 dgroups_app_rules = []  # type: List
 main = None
-follow_mouse_focus = True
+follow_mouse_focus = False
 bring_front_click = True
 cursor_warp = False
 
@@ -531,6 +568,7 @@ def startup_once():
 def restart_on_randr(qtile, ev):
     commands.reload_screen()
     qtile.cmd_restart()
+    z_update_bar_bg(qtile)
 
 
 @hook.subscribe.client_new
@@ -538,6 +576,24 @@ def floating_size_hints(window):
     hints = window.window.get_wm_normal_hints()
     if hints and 0 < hints['max_width'] < 1000:
         window.floating = True
+
+
+@hook.subscribe.client_mouse_enter
+def activate_screen_on_mouse_enter(window):
+    qtile = window.group.screen.qtile
+    window_screen = window.group.screen
+    current_screen = qtile.current_screen
+
+    z_update_bar_bg(qtile)
+    if current_screen != window_screen:
+        window.focus(False)
+        window.group.focus(window, False)
+
+
+# @hook.subscribe.current_screen_change
+# def update_active_top_bar_bg():
+#     z_update_bar_bg()
+
 
 
 # XXX: Gasp! We're lying here. In fact, nobody really uses or cares about this
