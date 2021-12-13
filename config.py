@@ -164,17 +164,12 @@ class Commands:
         call(self.autorandr)
         call(self.fehbg)
 
-    def get_watson_status(self):
-        w_stat = check_output(['watson', 'status', '-p'])
+    def get_hamster_status(self):
+        w_stat = check_output(['hamster', 'current'])
         w_stat = w_stat.decode("utf-8").replace('\n', '')
         if w_stat == 'No project started.':
             return w_stat
-        output = w_stat + ' '
-        w_stat = check_output(['watson', 'status', '-t'])
-        output += w_stat.decode("utf-8").replace('\n', '')
-        w_stat = check_output(['watson', 'status', '-e'])
-        output += ':: '+w_stat.decode("utf-8").replace('\n', '')
-        return output
+        return w_stat[17:]
 
     def get_vpn_status(self):
         nm_out = check_output(['nmcli', 'c', 'show', '--active'])
@@ -453,9 +448,7 @@ keys = [
     EzKey("M-A-i", lazy.run_extension(extension.CommandSet(
         commands={
             'work today': 'notify-send -u low -t 10000 "🛈" '
-            '"`watson report -Gdc`"',
-            'work log': 'notify-send -u low -t 10000 "🛈" '
-            '"`watson log --from=$(date  --date=\"5 days ago\" +"%Y-%m-%d") -Gc`"',
+            '"`hamster list`"',
             'time': 'notify-send -u normal -t 30000 "🛈" '
             '"`LC_ALL=sgs_LT.utf-8 date && echo && LC_ALL=sgs_LT.utf-8 cal`"',
             'weather':  'notify-send -u critical -t 10000 "🛈" '
@@ -467,7 +460,7 @@ keys = [
             },
         foreground=BLUE, selected_background=BLUE)),
         desc='dmenu various info'),
-    EzKey("M-A-t", lazy.spawn('watson_dmenu'), desc='watson dmenu'),
+    EzKey("M-A-t", lazy.spawn('hamster'), desc='hamster'),
     Key([hyper], "j", z_decrease_margins),
     Key([hyper], "k", z_increase_margins),
     EzKey("C-M-A-j", z_decrease_margins),
@@ -622,7 +615,7 @@ bottom = bar.Bar(
         #     ),
 
         widget.GenPollText(
-            func=commands.get_watson_status,
+            func=commands.get_hamster_status,
             update_interval=2,
             foreground=BLUE),
 
