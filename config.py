@@ -19,19 +19,20 @@
 # SOFTWARE.
 
 import json
+import sys
 from os import getenv, path
 from subprocess import call, check_output
 from typing import List  # noqa: F401
 
-import xrp
+import psutil
 from libqtile import bar, extension, hook, layout, widget
-from libqtile.command_client import CommandClient
-from libqtile.config import Click, Drag, EzKey, Group, Screen
+from libqtile.command.client import CommandClient
+from libqtile.config import (Click, Drag, EzKey, Group, Key, KeyChord, Match,
+                             Screen)
 from libqtile.lazy import lazy
 from libqtile.log_utils import logger
 
 logger.debug('Starting...')
-
 
 """
 TODO
@@ -45,7 +46,37 @@ improve Qtile:
 2. tooltips
 3. mouse clicks to all widgets
 6. theme extension
-7. restore POMODORE on qtile restart
+
+10. save state of windows on restart
+11. keyboard layout with flag
+12. Hyper-w - web chord:
+    b - open dmenu with bookmarks
+    d - delfi
+    f - firefox
+    n - nextcloud
+    ....
+13. inner border - set inner border on demand to mark window
+
+
+AUDIO:
+    Keyboard volume control
+See Keyboard shortcuts#Xorg to bind the following commands to your volume keys: XF86AudioRaiseVolume, XF86AudioLowerVolume and XF86AudioMute.
+
+First find out which sink corresponds to the audio output you would like to control. To list available sinks:
+
+$ pactl list sinks short
+Suppose sink 0 is to be used, to raise the volume:
+
+sh -c "pactl set-sink-mute 0 false ; pactl set-sink-volume 0 +5%"
+To lower the volume:
+
+$ sh -c "pactl set-sink-mute 0 false ; pactl set-sink-volume 0 -5%"
+To mute/unmute the volume:
+
+$ pactl set-sink-mute 0 toggle
+To mute/unmute the microphone:
+
+$ pactl set-source-mute 1 toggle
 
 """
 
@@ -102,25 +133,30 @@ def z_update_bar_bg(qtile):
     current_screen = qtile.current_screen
     for screen in qtile.screens:
         bg_color = GREEN if current_screen == screen else RED
-        top = screen.top
-        for w in top.widgets:
-            if 'windowname' == w.name:
+        bar = screen.right if screen.right is not None else screen.left
+        for w in bar.widgets:
+            if 'spacer' == w.name:
                 w.background = bg_color
-        top.draw()
+        bar.draw()
+
+
+terminal = 'alacritty'
 
 
 class Commands:
+    margins = 0
+    margin_step = 3
+
     autorandr = ['autorandr', '-c']
     fehbg = ['sh', '~/.fehbg']
-    alsamixer = 'st -e alsamixer'
-    update = "st -e yay -Syu"
+    alsamixer = terminal+' -e alsamixer'
+    update = terminal+" -e yay -Syu"
     volume_up = 'amixer -q -c 0 sset Master 5dB+'
     volume_down = 'amixer -q -c 0 sset Master 5dB-'
     volume_toggle = 'amixer -q set Master toggle'
     mic_toggle = 'amixer -q set Dmic0 toggle'
-    screenshot_all = 'zscrot'
-    screenshot_window = 'zscrot u'
-    screenshot_selection = 'zscrot s'
+    screenshot_all = 'flameshot full'
+    screenshot_selection = 'flameshot gui'
     brightness_up = 'light -A 5'
     brightness_down = 'light -U 5'
 
@@ -129,19 +165,123 @@ class Commands:
         call(self.fehbg)
 
     def get_watson_status(self):
-        w_stat = check_output(['watson', 'status'])
-        return w_stat.decode("utf-8").replace('\n', '')
+        w_stat = check_output(['watson', 'status', '-p'])
+        w_stat = w_stat.decode("utf-8").replace('\n', '')
+        if w_stat == 'No project started.':
+            return w_stat
+        output = w_stat + ' '
+        w_stat = check_output(['watson', 'status', '-t'])
+        output += w_stat.decode("utf-8").replace('\n', '')
+        w_stat = check_output(['watson', 'status', '-e'])
+        output += ':: '+w_stat.decode("utf-8").replace('\n', '')
+        return output
+
+    def get_vpn_status(self):
+        nm_out = check_output(['nmcli', 'c', 'show', '--active'])
+        for line in nm_out.decode('utf-8').split('\n'):
+            if line.find('vpn') >= 0:
+                return '(' + line.split(' ')[0] + ')'
+            if line.find('wireguard') >= 0:
+                return '(' + line.split(' ')[0] + ')'
+        return ''
+
+    def get_neopay_branch(self):
+        branch_name = check_output(
+                'git symbolic-ref --short -q HEAD',
+                cwd='/home/arnas/src/neopay/www/neopay',
+                shell=True)
+
+        return branch_name.decode("utf-8").replace('\n', '')
+
+    def get_ss_branch(self):
+        branch_name = check_output(
+                'git symbolic-ref --short -q HEAD',
+                cwd='/home/arnas/src/neopay/www/mano',
+                shell=True)
+
+        return branch_name.decode("utf-8").replace('\n', '')
+
+    def get_admin_branch(self):
+        branch_name = check_output(
+                'git symbolic-ref --short -q HEAD',
+                cwd='/home/arnas/src/neopay/www/admin',
+                shell=True)
+
+        return branch_name.decode("utf-8").replace('\n', '')
+
+    def get_keyboard(self):
+        display_map = {
+            'us': 'us ',
+            'lt(sgs)': 'sgs',
+            'ru(phonetic)': 'ru ',
+            }
+        keyboard = check_output(
+                'xkb-switch -p',
+                shell=True).decode('utf-8').replace('\n', '')
+
+        return display_map[keyboard]
+
+    def get_margins(self):
+        return self.margins
+
+    def increase_margins(self):
+        self.margins += self.margin_step
+
+    def decrease_margins(self):
+        self.margins -= self.margin_step
+        if self.margins < 0:
+            self.margins = 0
 
 
 commands = Commands()
 
-xresources = path.realpath(getenv('HOME') + '/.Xresources')
-result = xrp.parse_file(xresources, 'utf-8')
-font_data = result.resources['*.font'].split(':')
-FONT = font_data[0]
-FONT_SIZE = int(font_data[1].split('=')[1])
 
-color_data = json.loads(open(getenv('HOME')+'/.cache/wal/colors.json').read())
+@lazy.function
+def z_increase_margins(qtile):
+    commands.increase_margins()
+    qtile.current_layout.margin = commands.get_margins()
+
+
+@lazy.function
+def z_decrease_margins(qtile):
+    commands.decrease_margins()
+    qtile.current_layout.margin = commands.get_margins()
+
+
+try:
+    import xrp  # pip install xparser
+    xresources = path.realpath(getenv('HOME') + '/.Xresources')
+    result = xrp.parse_file(xresources, 'utf-8')
+    font_data = result.resources['*.font'].split(':')
+    FONT = font_data[0]
+    FONT_SIZE = int(font_data[1].split('=')[1])
+
+    color_data = json.loads(open(getenv('HOME')+'/.cache/wal/colors.json').read())
+except Exception:
+    logger.debug('Xresources load failed', exc_info=True)
+    FONT = 'Hack Nerd Font'
+    FONT_SIZE = 14
+    color_data = {
+            'colors': {
+                "color0": "#32302f",
+                "color1": "#fb4934",
+                "color2": "#b8bb26",
+                "color3": "#fabd2f",
+                "color4": "#83a598",
+                "color5": "#d3869b",
+                "color6": "#8ec07c",
+                "color7": "#d5c4a1",
+                "color8": "#665c54",
+                "color9": "#fb4934",
+                "color10": "#b8bb26",
+                "color11": "#fabd2f",
+                "color12": "#83a598",
+                "color13": "#d3869b",
+                "color14": "#8ec07c",
+                "color15": "#fbf1c7"
+                }
+            }
+
 # BLACK = color_data['colors']['color0']
 # BLACK = "#15181a"
 BLACK = "#1A1C1D"
@@ -153,6 +293,7 @@ MAGENTA = color_data['colors']['color5']
 CYAN = color_data['colors']['color6']
 WHITE = color_data['colors']['color7']
 
+hyper = 'mod3'
 keys = [
     # Switch between windows
     EzKey("M-h", lazy.layout.left()),
@@ -194,11 +335,10 @@ keys = [
     EzKey("M-<comma>", lazy.prev_screen()),
     EzKey("M-<period>", lazy.next_screen()),
 
-    EzKey("M-<Return>", lazy.spawn("st")),
-    EzKey("M-A-<Return>", lazy.spawn("st -e tmux")),
+    EzKey("M-<Return>", lazy.spawn(terminal)),
 
     EzKey(
-        "A-S-<space>",
+        "A-<space>",
         lazy.widget['keyboardlayout'].next_keyboard(),
         desc='switch keyboard layout'),
 
@@ -234,17 +374,18 @@ keys = [
     EzKey(
         '<Print>',
         lazy.spawn(Commands.screenshot_selection),
-        desc='scrot selection'),
+        desc='screenshot all'),
 
     EzKey(
         'S-<Print>',
         lazy.spawn(Commands.screenshot_all),
-        desc='scrot screen'),
+        desc='screenshot'),
 
-    EzKey(
-        'A-<Print>',
-        lazy.spawn(Commands.screenshot_window),
-        desc='scrot window'),
+    # Quick lounch
+    EzKey("M-v", lazy.spawn(terminal+" -e nvim"), desc="ViM"),
+    EzKey("M-w", lazy.spawn("google-chrome-stable"), desc="chrome"),
+    EzKey("M-f", lazy.spawn(terminal+" -e ranger"), desc="ranger"),
+    EzKey("M-c", lazy.spawn(terminal+" -e bc -l"), desc="calculator (bc)"),
 
     # DMENU
     EzKey("M-r", lazy.run_extension(extension.DmenuRun()), desc='dmenu run'),
@@ -261,7 +402,8 @@ keys = [
     EzKey("M-A-p", lazy.run_extension(extension.Dmenu(
         dmenu_command="passmenu",
         foreground=RED,
-        selected_background=RED)),
+        selected_background=RED,
+        dmenu_lines=50)),
         desc='passmenu'),
     EzKey("M-A-n", lazy.run_extension(extension.Dmenu(
         dmenu_command="networkmanager_dmenu",
@@ -274,13 +416,20 @@ keys = [
             'next': 'mocp -f',
             'previous': 'mocp -r',
             'quit': 'mocp -x',
-            'open': 'st -e mocp &',
+            'open': terminal+' -e mocp &',
             'shuffle': 'mocp -t shuffle',
             'repeat': 'mocp -t repeat',
             },
         pre_commands=['[ $(mocp -i | wc -l) -lt 1 ] && mocp -S'],
         foreground=BLUE, selected_background=BLUE)),
         desc='dmenu MOC'),
+    KeyChord([hyper], "m", [
+        Key([], "z", lazy.spawn("mocp -r")),
+        Key([], "x", lazy.spawn("mocp -p")),
+        Key([], "c", lazy.spawn("mocp -G")),
+        Key([], "v", lazy.spawn("mocp -s")),
+        Key([], "b", lazy.spawn("mocp -f")),
+        ]),
     EzKey("M-C-q", lazy.run_extension(extension.CommandSet(
         commands={
             'lock': 'slock',
@@ -294,8 +443,8 @@ keys = [
         desc='dmenu session manager'),
     EzKey("M-A-r", lazy.run_extension(extension.CommandSet(
         commands={
-            'mail (neomutt)': 'EDITOR=/usr/bin/nvim st -e neomutt &',
-            'irc (irssi)': 'st -e irssi &',
+            'mail (neomutt)': 'EDITOR=/usr/bin/nvim '+terminal+' -e neomutt &',
+            'irc (irssi)': terminal+' -e irssi &',
             'scan (utsushi)': 'utsushi &',
             },
         foreground=YELLOW, selected_background=YELLOW)),
@@ -314,21 +463,42 @@ keys = [
             '&& ansiweather -l Galgiai -f 7 -a false -s true`"',
             'uptime': 'notify-send -u low "🛈" "`uptime -p`"',
             'kernel': 'notify-send -u low "🛈" "`uname -r`"',
+            'battery': 'notify-send -u low "🛈" "`upower -i /org/freedesktop/UPower/devices/battery_BAT0`"',
             },
         foreground=BLUE, selected_background=BLUE)),
         desc='dmenu various info'),
+    EzKey("M-A-t", lazy.spawn('watson_dmenu'), desc='watson dmenu'),
+    Key([hyper], "j", z_decrease_margins),
+    Key([hyper], "k", z_increase_margins),
+    EzKey("C-M-A-j", z_decrease_margins),
+    EzKey("C-M-A-k", z_increase_margins),
 ]
 
 groups = [Group(i) for i in "1234567890"]
+sgs_groups = {
+    '1': 'aogonek',
+    '2': 'ccaron',
+    '3': 'eogonek',
+    '4': 'eabovedot',
+    '5': 'iogonek',
+    '6': 'scaron',
+    '7': 'uogonek',
+    '8': 'umacron',
+    '9': 'doublelowquotemark',
+    '0': 'leftdoublequotemark'
+    }
 
 for i in groups:
     keys.extend([
         EzKey("M-%s" % i.name, lazy.group[i.name].toscreen(toggle=True)),
         EzKey("M-S-%s" % i.name, lazy.window.togroup(i.name)),
+
+        EzKey("M-<%s>" % sgs_groups[i.name], lazy.group[i.name].toscreen(toggle=True)),
+        EzKey("M-S-<%s>" % sgs_groups[i.name], lazy.window.togroup(i.name)),
     ])
 
 layouts = [
-    layout.Columns(border_focus=RED),
+    layout.Columns(border_focus=RED, margin=0),
     layout.Max(),
     # layout.MonadTall(border_focus=RED, new_at_current=True),
 ]
@@ -341,7 +511,6 @@ widget_defaults = dict(
     background=BLACK
 )
 extension_defaults = dict(
-    dmenu_prompt=">",
     dmenu_font=FONT + '-10',
     background=BLACK,
     foreground=GREEN,
@@ -350,52 +519,65 @@ extension_defaults = dict(
     dmenu_height=24,
 )
 
+try:
+    # import passwords
+    cloud = path.realpath(getenv('HOME') + '/cloud')
+    sys.path.insert(1, cloud)
+    import pakavuota
+
+    logger.info(pakavuota.gmail_user)
+    gmail_widget = widget.GmailChecker(
+            username=pakavuota.gmail_user,
+            password=pakavuota.gmail_password,
+            status_only_unseen=True,
+            display_fmt="{0}",
+            foreground=YELLOW)
+except Exception:
+    gmail_widget = widget.TextBox(text='GMAIL', foreground=RED)
+
+
 top = bar.Bar(
     [
-        widget.CurrentScreen(
-            active_text='⬤',
-            inactive_text='⬤',
-            active_color=GREEN,
-            inactive_color=RED),
-
         widget.GroupBox(hide_unused=True),
         widget.CurrentLayoutIcon(scale=0.65),
-        widget.WindowName(foreground=BLACK),
+        widget.WindowName(foreground=GREEN),
         widget.Clipboard(foreground=RED),
         widget.Moc(play_color=GREEN, noplay_color=YELLOW),
 
-        widget.TextBox(text='::', foreground=RED),
+        widget.PulseVolume(
+            foreground=BLUE),
 
-        widget.Volume(
-            volume_app=commands.alsamixer,
-            foreground=GREEN),
+        # widget.Volume(
+        #     volume_app=commands.alsamixer,
+        #     foreground=GREEN),
 
-        widget.KeyboardLayout(
-            configured_keyboards=['us', 'lt sgs', 'ru phonetic'],
-            display_map={
-                'us': 'us ',
-                'lt sgs': 'sgs',
-                'ru phonetic': 'ru ',
-                },
-            options='compose:rctrl',
+        # widget.KeyboardLayout(
+        #     configured_keyboards=['us', 'lt sgs', 'ru phonetic'],
+        #     display_map={
+        #         'us': 'us ',
+        #         'lt sgs': 'sgs',
+        #         'ru phonetic': 'ru ',
+        #         },
+        #     options='compose:rctrl,lv3:ralt_switch',
+        #     foreground=GREEN
+        #     ),
+        # widget.KeyboardLayout(
+            # layout_groups='us,lt,ru',
+            # variant='intl,sgs,phonetic',
+            # display_map={
+            #     'us': 'us ',
+            #     'lt sgs': 'sgs',
+            #     'ru phonetic': 'ru ',
+            #     },
+            # options='grp:ctrl_shift_toggle,compose:rctrl,lv3:ralt_switch',
+            # config_file='~/.config/keyboard',
+        widget.GenPollText(
+            func=commands.get_keyboard,
+            update_interval=0.5,
             foreground=GREEN
             ),
 
-        widget.Battery(
-            discharge_char='↓',
-            charge_char='↑',
-            format='{char} {hour:d}:{min:02d}',
-            foreground=YELLOW,
-            low_foreground=RED),
-
-        widget.Maildir(
-            maildir_path='~/.local/share/mail/gmail',
-            sub_folders=[{'path': 'INBOX', 'label': 'g'}],
-            subfolder_fmt='{label} {value}',
-            total=True,
-            hide_when_empty=True,
-            update_interval=10,
-            foreground=BLUE),
+        gmail_widget,
 
         widget.Maildir(
             maildir_path='~/.local/share/mail/zordsdavini',
@@ -413,7 +595,7 @@ top = bar.Bar(
             colour_have_updates=RED,
             execute=commands.update),
 
-        widget.Clock(format='%Y-%m-%d %H:%M'),
+        widget.Clock(format='%Y-%m-%d %H:%M', foreground=BLACK, background=BLUE),
         widget.Systray(),
     ],
     24,
@@ -423,38 +605,68 @@ top = bar.Bar(
 
 bottom = bar.Bar(
     [
-        widget.Pomodoro(
-            num_pomodori=4,
-            length_pomodori=25,
-            length_short_break=5,
-            length_long_break=15,
-            color_inactive=YELLOW,
-            color_break=GREEN,
-            color_active=RED,
-            notification_on=True,
-            prefix_inactive="🍅",
-            prefix_active="🍅 ",
-            prefix_break="☕ ",
-            prefix_long_break="☕ ",
-            prefix_paused="🍅 PAUSED",
-            ),
+        # widget.Pomodoro(
+        #     num_pomodori=4,
+        #     length_pomodori=25,
+        #     length_short_break=5,
+        #     length_long_break=15,
+        #     color_inactive=YELLOW,
+        #     color_break=GREEN,
+        #     color_active=RED,
+        #     notification_on=True,
+        #     prefix_inactive="🍅",
+        #     prefix_active="🍅 ",
+        #     prefix_break="☕ ",
+        #     prefix_long_break="☕ ",
+        #     prefix_paused="🍅 PAUSED",
+        #     ),
 
         widget.GenPollText(
             func=commands.get_watson_status,
             update_interval=2,
             foreground=BLUE),
 
+        # widget.GenPollText(
+        #     func=commands.get_neopay_branch,
+        #     update_interval=2,
+        #     foreground=RED),
+
+        # widget.GenPollText(
+        #     func=commands.get_ss_branch,
+        #     update_interval=2,
+        #     foreground=YELLOW),
+
+        # widget.GenPollText(
+        #     func=commands.get_admin_branch,
+        #     update_interval=2,
+        #     foreground=MAGENTA),
+
         widget.Spacer(length=bar.STRETCH),
+
+        widget.Battery(
+            discharge_char='↓',
+            charge_char='↑',
+            format='{char} {hour:d}:{min:02d}',
+            foreground=MAGENTA,
+            low_foreground=RED),
 
         widget.Backlight(
             change_command='light -S {0}',
-            foreground=YELLOW,
+            background=YELLOW,
+            foreground=BLACK,
             backlight_name='intel_backlight'),
 
         widget.Wlan(
             interface='wlp0s20f3',
             format='{essid} {percent:2.0%}',
-            foreground=BLUE),
+            background=BLUE,
+            foreground=BLACK),
+
+        widget.GenPollText(
+            func=commands.get_vpn_status,
+            update_interval=2,
+            background=BLUE,
+            foreground=BLACK),
 
         widget.CPUGraph(
             line_width=1,
@@ -474,7 +686,7 @@ bottom = bar.Bar(
             interface="auto"),
         widget.MemoryGraph(
             line_width=1,
-            border_width=0,
+            border_width=1,
             width=4,
             type='box',
             graph_color=YELLOW,
@@ -484,23 +696,34 @@ bottom = bar.Bar(
     24,
     opacity=0.6
 )
+
 screens = [
-    Screen(top=top, bottom=bottom),
+    Screen(
+        top=top,
+        bottom=bottom,
+        right=bar.Bar(
+            [widget.Spacer(length=bar.STRETCH)],
+            4,
+            opacity=0.6),
+        wallpaper='/home/arnas/cloud/configs/arch-linux-wallpaper.jpg',
+        wallpaper_mode='fill'
+    ),
     Screen(top=bar.Bar(
         [
-            widget.CurrentScreen(
-                active_text='⬤',
-                inactive_text='⬤',
-                active_color=GREEN,
-                inactive_color=RED),
-
             widget.CurrentLayoutIcon(scale=0.65),
-            widget.WindowName(foreground=BLACK),
+            widget.WindowName(foreground=GREEN),
         ],
         24,
         opacity=0.6,
         background=RED,
-    )),
+        ),
+        left=bar.Bar(
+            [widget.Spacer(length=bar.STRETCH)],
+            4,
+            opacity=0.6),
+        wallpaper='/home/arnas/cloud/configs/arch-linux-wallpaper.jpg',
+        wallpaper_mode='fill'
+    ),
 ]
 
 # Drag floating layouts.
@@ -526,26 +749,20 @@ mouse = [
 dgroups_key_binder = None
 dgroups_app_rules = []  # type: List
 main = None
-follow_mouse_focus = False
+follow_mouse_focus = True
 bring_front_click = True
 cursor_warp = False
 
 floating_layout = layout.Floating(
     float_rules=[
-        {'wmclass': 'confirm'},
-        {'wmclass': 'dialog'},
-        {'wmclass': 'download'},
-        {'wmclass': 'error'},
-        {'wmclass': 'file_progress'},
-        {'wmclass': 'notification'},
-        {'wmclass': 'splash'},
-        {'wmclass': 'toolbar'},
-        {'wmclass': 'confirmreset'},  # gitk
-        {'wmclass': 'makebranch'},  # gitk
-        {'wmclass': 'maketag'},  # gitk
-        {'wname': 'branchdialog'},  # gitk
-        {'wname': 'pinentry'},  # GPG key password entry
-        {'wmclass': 'ssh-askpass'},  # ssh-askpass
+        *layout.Floating.default_float_rules,
+        Match(wm_class='confirmreset'),  # gitk
+        Match(wm_class='makebranch'),  # gitk
+        Match(wm_class='maketag'),  # gitk
+        Match(wm_class='ssh-askpass'),  # ssh-askpass
+        Match(title='branchdialog'),  # gitk
+        Match(title='pinentry'),  # GPG key password entry
+        Match(title='pinentry-gtk-2'),  # GPG key password entry
     ],
     border_focus=GREEN)
 
@@ -578,7 +795,7 @@ def floating_size_hints(window):
         window.floating = True
 
 
-@hook.subscribe.client_mouse_enter
+@hook.subscribe.client_focus
 def activate_screen_on_mouse_enter(window):
     qtile = window.group.screen.qtile
     window_screen = window.group.screen
@@ -590,11 +807,26 @@ def activate_screen_on_mouse_enter(window):
         window.group.focus(window, False)
 
 
-# @hook.subscribe.current_screen_change
-# def update_active_top_bar_bg():
-#     z_update_bar_bg()
+# @hook.subscribe.client_new
+# def _swallow(window):
+#     pid = window.window.get_net_wm_pid()
+#     ppid = psutil.Process(pid).ppid()
+#     cpids = {c.window.get_net_wm_pid(): wid for wid, c in window.qtile.windows_map.items()}
+#     for i in range(5):
+#         if not ppid:
+#             return
+#         if ppid in cpids:
+#             parent = window.qtile.windows_map.get(cpids[ppid])
+#             parent.minimized = True
+#             window.parent = parent
+#             return
+#         ppid = psutil.Process(ppid).ppid()
 
 
+# @hook.subscribe.client_killed
+# def _unswallow(window):
+#     if hasattr(window, 'parent'):
+#         window.parent.minimized = False
 
 # XXX: Gasp! We're lying here. In fact, nobody really uses or cares about this
 # string besides java UI toolkits; you can see several discussions on the
