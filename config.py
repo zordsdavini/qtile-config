@@ -223,9 +223,11 @@ class Commands:
             return ""
 
         if len(d_stat) > 100:
-            return "\U0001F40B " + d_stat[:50] + "... (" + str(len(d_stat.split())) +")"
+            return (
+                "\U0001f40b " + d_stat[:50] + "... (" + str(len(d_stat.split())) + ")"
+            )
 
-        return "\U0001F40B " + d_stat
+        return "\U0001f40b " + d_stat
 
     def get_vpn_status(self):
         nm_out = check_output(["nmcli", "c", "show", "--active"])
@@ -629,7 +631,7 @@ extension_defaults = dict(
 
 try:
     # import passwords
-    cloud = path.realpath(getenv("HOME") + "/cloud")
+    cloud = path.expanduser("~/cloud")
     sys.path.insert(1, cloud)
     import pakavuota
 
@@ -655,7 +657,16 @@ top = bar.Bar(
         #     format='{xesam:artist} - {xesam:title}',
         #     foreground=GREEN
         # ),
-        widget.PulseVolume(foreground=BLUE),
+        widget.Volume(
+            background=GREEN,
+            foreground=BLACK,
+            decorations=[
+                RectDecoration(
+                    use_widget_background=True, radius=8, filled=True, padding_y=3
+                )
+            ],
+        ),
+        # widget.PulseVolume(foreground=BLUE),
         widget.Image(filename="~/.config/qtile/flags/en.png", margin=5),
         gmail_widget,
         widget.CheckUpdates(
@@ -779,7 +790,7 @@ screens = [
     Screen(
         top=top,
         bottom=bottom,
-        right=bar.Bar([widget.Spacer(length=bar.STRETCH)], 4, opacity=0.6),
+        # right=bar.Bar([widget.Spacer(length=bar.STRETCH)], 4, opacity=0.6),
         wallpaper="/home/arnas/cloud/configs/arch-linux-wallpaper.jpg",
         # wallpaper=wallpapers.WALLPAPER_TRIANGLES_ROUNDED,
         wallpaper_mode="fill",
@@ -794,7 +805,7 @@ screens = [
             opacity=0.6,
             background=RED,
         ),
-        left=bar.Bar([widget.Spacer(length=bar.STRETCH)], 4, opacity=0.6),
+        # left=bar.Bar([widget.Spacer(length=bar.STRETCH)], 4, opacity=0.6),
         wallpaper="/home/arnas/cloud/configs/arch-linux-wallpaper.jpg",
         # wallpaper=wallpapers.WALLPAPER_TRIANGLES_ROUNDED,
         wallpaper_mode="fill",
@@ -864,7 +875,7 @@ def autostart():
 def restart_on_randr(qtile, ev):
     commands.reload_screen()
     qtile.reload_config()
-    z_update_bar_bg(qtile)
+    # z_update_bar_bg(qtile)
 
 
 @hook.subscribe.client_new
@@ -880,7 +891,7 @@ def activate_screen_on_mouse_enter(window):
     window_screen = window.group.screen
     current_screen = qtile.current_screen
 
-    z_update_bar_bg(qtile)
+    # z_update_bar_bg(qtile)
     if current_screen != window_screen:
         window.focus(False)
         window.group.focus(window, False)
