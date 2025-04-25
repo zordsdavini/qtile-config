@@ -19,6 +19,7 @@
 # SOFTWARE.
 
 import json
+import re
 import sys
 from os import getenv, path
 from subprocess import call, check_output, run, Popen
@@ -43,6 +44,7 @@ from qtile_extras.widget.decorations import RectDecoration
 
 from timelog import TimeLog
 from show_keys import show_keys
+from z_imap_widget import ZImapWidget
 
 logger.debug("Starting...")
 
@@ -89,6 +91,8 @@ $ pactl set-source-mute 1 toggle
 terminal = "alacritty"
 current_layout = "en-sgs"
 
+identity_zordsdavini = "1bb7eeeeff043ab8758fddf7b3cb83b9742b284fc5b74f5a9e6bc56f73dac9ed"
+identity_misfin = "cafffdfddc8bc52f96909e3202e618e777d6c973081af1b71b2b3f27b4ef2176"
 
 # monadtall extention to follow maximized window if we have only two
 @lazy.function
@@ -249,6 +253,28 @@ class Commands:
         if self.margins < 0:
             self.margins = 0
 
+    def get_gemini_notifications(self, identity, url):
+        out = check_output(["lagrange", "-d", "-I", identity, url])
+        return len(re.findall(r'^=>', out.decode("utf-8"), re.MULTILINE))
+
+    def get_gemini_notifications_bbs(self):
+        count = self.get_gemini_notifications(identity_zordsdavini, "gemini://bbs.geminispace.org/notif/feed")
+        if count > 0:
+            return "BBS " + str(count)
+        return ""
+
+    def get_gemini_notifications_station(self):
+        count = self.get_gemini_notifications(identity_zordsdavini, "gemini://station.martinrue.com/zordsdavini/notifications")-1
+        if count > 0:
+            return "station " + str(count)
+        return ""
+
+    def get_gemini_notifications_misfin(self):
+        count = self.get_gemini_notifications(identity_misfin, "gemini://arns.lt:1958")-10
+        if count > 0:
+            return "✉ M " + str(count)
+        return ""
+
 
 commands = Commands()
 
@@ -268,7 +294,7 @@ def z_decrease_margins(qtile):
 
 
 try:
-    color_data = json.loads(open(getenv("HOME") + "/.cache/wal/colors.json").read())
+    color_data = json.loads(open(str(getenv("HOME")) + "/.cache/wal/colors.json").read())
 except Exception:
     color_data = {
         "colors": {
@@ -620,6 +646,15 @@ layouts = [
 widget_defaults = dict(
     font=FONT, fontsize=FONT_SIZE, padding=3, foreground=WHITE, background=BLACK
 )
+decorations_default = {
+    "decorations": [
+        RectDecoration(
+            use_widget_background=True, radius=8, filled=True, padding_y=3, group=True
+        ),
+    ],
+    "padding": 10,
+} 
+
 extension_defaults = dict(
     dmenu_font=FONT + "-10",
     background=BLACK,
@@ -631,20 +666,34 @@ extension_defaults = dict(
 
 try:
     # import passwords
-    cloud = path.expanduser("~/cloud")
+    cloud = path.realpath(getenv('HOME') + '/cloud')
     sys.path.insert(1, cloud)
     import pakavuota
+    from importlib import reload
+    reload(pakavuota)
 
-    logger.info(pakavuota.gmail_user)
     gmail_widget = widget.GmailChecker(
         username=pakavuota.gmail_user,
         password=pakavuota.gmail_password,
         status_only_unseen=True,
-        display_fmt="{0}",
-        foreground=YELLOW,
+        display_fmt="✉ G {0}",
+        background=YELLOW,
+        foreground=BLACK,
+        **decorations_default
+    )
+    mail_widget = widget.ImapWidget(
+        user=pakavuota.mail_user,
+        password=pakavuota.mail_password,
+        server=pakavuota.mail_server,
+        label="✉ A ",
+        hide_no_unseen=True,
+        background=BLUE,
+        foreground=BLACK,
+        **decorations_default
     )
 except Exception:
-    gmail_widget = widget.TextBox(text="GMAIL", foreground=RED)
+    gmail_widget = widget.TextBox(text="GMAIL", foreground=BLACK, background=YELLOW, **decorations_default)
+    mail_widget = widget.TextBox(text="ARNS.LT", foreground=BLACK, background=BLUE, **decorations_default)
 
 
 top = bar.Bar(
@@ -660,32 +709,16 @@ top = bar.Bar(
         widget.Volume(
             background=GREEN,
             foreground=BLACK,
-            decorations=[
-                RectDecoration(
-                    use_widget_background=True, radius=8, filled=True, padding_y=3
-                )
-            ],
+            **decorations_default
         ),
         # widget.PulseVolume(foreground=BLUE),
-        widget.Image(filename="~/.config/qtile/flags/en.png", margin=5),
-        gmail_widget,
-        widget.CheckUpdates(
-            distro="Arch_yay",
-            display_format="{updates}",
-            colour_no_update=GREEN,
-            colour_have_updates=RED,
-            execute=commands.update,
-        ),
         widget.Clock(
             format="%Y-%m-%d %H:%M",
             foreground=BLACK,
             background=BLUE,
-            decorations=[
-                RectDecoration(
-                    use_widget_background=True, radius=8, filled=True, padding_y=3
-                )
-            ],
+            **decorations_default
         ),
+        widget.Image(filename="~/.config/qtile/flags/en.png", margin=5),
         widget.StatusNotifier(),
     ],
     24,
@@ -713,40 +746,70 @@ bottom = bar.Bar(
             foreground_low=BLACK,
             background_low=RED,
             parse_text=z_format_notify,
-            decorations=[
-                RectDecoration(
-                    use_widget_background=True, radius=8, filled=True, padding_y=3
-                ),
-            ],
+            **decorations_default
         ),
         # widget.GenPollText(
         # func=commands.get_hamster_status,
         # update_interval=2,
         # foreground=BLUE),
         widget.Spacer(length=bar.STRETCH),
+        widget.GenPollText(
+            func=commands.get_gemini_notifications_bbs,
+            update_interval=5*60,
+            background=BLUE,
+            foreground=BLACK,
+            **decorations_default
+        ),
+        widget.GenPollText(
+            func=commands.get_gemini_notifications_station,
+            update_interval=5*60,
+            background=GREEN,
+            foreground=BLACK,
+            **decorations_default
+        ),
+        widget.GenPollText(
+            func=commands.get_gemini_notifications_misfin,
+            update_interval=5*60,
+            background=CYAN,
+            foreground=BLACK,
+            **decorations_default
+        ),
+        gmail_widget,
+        mail_widget,
+        widget.CheckUpdates(
+            distro="Arch_yay",
+            display_format="🐧 {updates}",
+            colour_no_update=GREEN,
+            colour_have_updates=BLACK,
+            execute=commands.update,
+            background=RED,
+            **decorations_default
+        ),
         widget.Battery(
             discharge_char="↓",
             charge_char="↑",
             format="{char} {hour:d}:{min:02d}",
-            foreground=MAGENTA,
-            low_foreground=RED,
+            background=MAGENTA,
+            low_background=RED,
+            foreground=BLACK,
+            **decorations_default
         ),
         widget.Backlight(
             change_command="light -S {0}",
             background=YELLOW,
             foreground=BLACK,
             backlight_name="intel_backlight",
-            decorations=[
-                RectDecoration(
-                    use_widget_background=True, radius=8, filled=True, padding_y=3
-                )
-            ],
+            **decorations_default
         ),
         widget.Wlan(
-            interface="wlp0s20f3", format="{essid} {percent:2.0%}", foreground=BLUE
+            interface="wlp0s20f3", format="{essid} {percent:2.0%}", background=BLUE,
+            foreground=BLACK,
+            **decorations_default
         ),
         widget.GenPollText(
-            func=commands.get_vpn_status, update_interval=2, foreground=BLUE
+            func=commands.get_vpn_status, update_interval=2, background=BLUE,
+            foreground=BLACK,
+            **decorations_default
         ),
         widget.CPUGraph(
             line_width=1,
